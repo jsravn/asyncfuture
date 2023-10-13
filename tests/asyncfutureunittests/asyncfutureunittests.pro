@@ -24,7 +24,9 @@ SOURCES +=     main.cpp \
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\" QUICK_TEST_SOURCE_DIR=\\\"$$PWD/qmltests\\\"
 
-include(vendor/vendor.pri)
+include(testable/testable.pri)
+include(qtshell/qtshell.pri)
+#include(vendor/vendor.pri)
 include(../../asyncfuture.pri)
 
 DISTFILES +=     qpm.json  \
