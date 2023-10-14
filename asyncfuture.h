@@ -561,17 +561,13 @@ public:
     }
 
     void complete(QFuture<T> future) {
-        auto weakRef = this->weakRef;
-        auto onFinished = [weakRef, future]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->template completeByFinishedFuture<T>(future);
-            }
+        auto strongRef = this->weakRef.toStrongRef();
+        auto onFinished = [strongRef, future]() {
+            strongRef->template completeByFinishedFuture<T>(future);
         };
 
-        auto onCanceled = [weakRef]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->cancel();
-            }
+        auto onCanceled = [strongRef]() {
+            strongRef->cancel();
         };
 
         watch(future,
@@ -593,8 +589,8 @@ public:
               this,
               nullptr,
               [](){},
-              pushCancel,
-              [](int){},
+        pushCancel,
+        [](int){},
         [](int,int){}
         );
 
@@ -603,17 +599,13 @@ public:
 
     template <typename ANY>
     void complete(QFuture<QFuture<ANY>> future) {
-        auto weakRef = this->weakRef;
-        auto onFinished = [weakRef, future]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->complete(future.result());
-            }
+        auto strongRef = this->weakRef.toStrongRef();
+        auto onFinished = [strongRef, future]() {
+            strongRef->complete(future.result());
         };
 
-        auto onCanceled = [weakRef]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->cancel();
-            }
+        auto onCanceled = [strongRef]() {
+            strongRef->cancel();
         };
 
         watch(future,
@@ -636,6 +628,9 @@ public:
 
     template <typename Member>
 	void cancel(const QObject* sender, Member member) {
+        // Used internally for linking to the context object.
+        // weakRef is used because we don't want the long lived context object to keep
+        // deferred alive.
         auto weakRef = this->weakRef;
         QObject::connect(sender, member,
                          this, [weakRef]() {
@@ -647,11 +642,9 @@ public:
 
     template <typename ANY>
     void cancel(QFuture<ANY> future) {
-        auto weakRef = this->weakRef;
-        auto onFinished = [weakRef]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->cancel();
-            }
+        auto strongRef = this->weakRef.toStrongRef();
+        auto onFinished = [strongRef]() {
+            strongRef->cancel();
         };
 
         watch(future,
@@ -666,7 +659,11 @@ public:
 
     /// Create a DeferredFugture instance and manage by a shared pointer
     static QSharedPointer<DeferredFuture<T> > create() {
-        QSharedPointer<DeferredFuture<T> > ptr(new DeferredFuture<T>());
+        auto deleter = [](DeferredFuture<T> *object) {
+            object->cancel();
+            object->deleteLater();
+        };
+        QSharedPointer<DeferredFuture<T> > ptr(new DeferredFuture<T>(), deleter);
         ptr->weakRef = ptr.toWeakRef();
         return ptr;
     }
@@ -858,16 +855,12 @@ public:
         mutex.unlock();
 
 
-        auto weakRef = this->weakRef;
+        auto strongRef = this->weakRef.toStrongRef();
         Private::watch(future, this, 0,
-                       [weakRef, index]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->completeFutureAt(index);
-            }
-        },[weakRef, index]() {
-            if (auto self = weakRef.toStrongRef()) {
-                self->cancelFutureAt(index);
-            }
+                       [strongRef, index]() {
+            strongRef->completeFutureAt(index);
+        },[strongRef, index]() {
+            strongRef->cancelFutureAt(index);
         },
         progressFunc,
         progressRangeFunc
@@ -875,6 +868,10 @@ public:
     }
 
     static QSharedPointer<CombinedFuture> create(bool settleAllMode) {
+        auto deleter = [](CombinedFuture *object) {
+            object->cancel();
+            object->deleteLater();
+        };
         QSharedPointer<CombinedFuture> ptr(new CombinedFuture(settleAllMode));
         ptr->weakRef = ptr.toWeakRef();
         return ptr;
