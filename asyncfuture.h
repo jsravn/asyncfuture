@@ -780,8 +780,8 @@ class CombinedFuture: public DeferredFuture<void> {
 
 public:
     CombinedFuture(bool settleAllModeArg = false) : DeferredFuture<void>(),
-        count(0),
         settledCount(0),
+        count(0),
         anyCanceled(false),
         settleAllMode(settleAllModeArg)
     {
