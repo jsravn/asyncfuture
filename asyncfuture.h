@@ -461,10 +461,6 @@ template <typename T>
 class DeferredFuture : public QObject, public QFutureInterface<T> {
 public:
 
-    ~DeferredFuture() {
-        cancel();
-    }
-
     template <typename ANY>
     void track(QFuture<ANY> future) {
         QPointer<DeferredFuture<T>> thiz = this;
