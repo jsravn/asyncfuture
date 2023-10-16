@@ -630,7 +630,8 @@ public:
         auto weakRef = this->weakRef;
         QObject::connect(sender, member,
                          this, [weakRef]() {
-            if (auto self = weakRef.toStrongRef()) {
+            auto self = weakRef.toStrongRef();
+            if (!self.isNull()) {
                 self->cancel();
             }
         });
