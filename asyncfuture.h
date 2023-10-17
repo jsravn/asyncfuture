@@ -461,6 +461,10 @@ template <typename T>
 class DeferredFuture : public QObject, public QFutureInterface<T> {
 public:
 
+    ~DeferredFuture() {
+        qWarning() << (reinterpret_cast<uintptr_t>(this) % 97) << "~Deferred()";
+    }
+
     template <typename ANY>
     void track(QFuture<ANY> future) {
         QPointer<DeferredFuture<T>> thiz = this;
@@ -704,6 +708,7 @@ public:
 protected:
     DeferredFuture(QObject* parent = nullptr): QObject(parent),
                     QFutureInterface<T>(QFutureInterface<T>::Running) {
+            qWarning() << (reinterpret_cast<uintptr_t>(this) % 97) << "Deferred()";
             moveToThread(QCoreApplication::instance()->thread());
     }
 
